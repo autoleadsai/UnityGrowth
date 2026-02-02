@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Unity Master - All In One SaaS</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #0f172a; --panel: #1e293b; --border: #334155;
+            --primary: #6366f1; --accent: #8b5cf6; --text: #f8fafc; --muted: #94a3b8;
+            --success: #10b981; --warning: #f59e0b; --danger: #ef4444;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 15px; overflow-y: auto; transition:0.3s; }
+        .logo { font-size: 1.2rem; font-weight: 800; color: var(--text); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .logo span { color: var(--primary); }
+        
+        .nav-head { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin: 15px 0 5px 0; font-weight: bold; }
+        .nav-item { padding: 10px; border-radius: 8px; cursor: pointer; color: #cbd5e1; display: flex; align-items: center; gap: 10px; transition: 0.2s; font-size: 0.9rem; margin-bottom: 2px; }
+        .nav-item:hover, .nav-item.active { background: rgba(99, 102, 241, 0.15); color: var(--primary); }
+        .lock { margin-left: auto; font-size: 0.7rem; color: var(--warning); }
+
+        /* MAIN */
+        .main { flex: 1; padding: 20px; overflow-y: auto; position: relative; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+        .section { display: none; animation: fadeIn 0.3s ease; }
+        .section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* UI COMPONENTS */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; }
+        .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 20px; position: relative; }
+        .btn { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn:hover { opacity: 0.9; }
+        input, select, textarea { width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); color: white; border-radius: 6px; margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 0.85rem; }
+
+        /* MODALS */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: none; justify-content: center; align-items: center; }
+        .modal { background: var(--panel); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; border: 1px solid var(--border); }
+
+        /* VIDEO CALL STYLES */
+        .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 20px; }
+        .video-box { background: black; border-radius: 8px; overflow: hidden; position: relative; aspect-ratio: 16/9; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: 60px; flex-direction: row; padding: 10px; overflow-x: auto; align-items: center; white-space: nowrap; }
+            .logo, .nav-head { display: none; }
+            .nav-item { padding: 8px 15px; margin: 0 5px; background: #2d3748; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="modal-overlay" id="paywallModal">
+        <div class="modal" style="border-color: var(--warning);">
+            <h2 style="color:var(--warning);">Upgrade to PRO 👑</h2>
+            <p>Unlock Ads, Website Builder & SEO Tools</p>
+            <h1 style="font-size:2.5rem; margin:10px 0;">$29</h1>
+            <button class="btn" style="background:var(--warning); color:black;" onclick="payNow()">Pay with PayPal</button>
+            <div style="margin-top:15px;">
+                <input type="text" id="unlockCode" placeholder="Enter Code (UNITYPRO)">
+                <button class="btn" onclick="unlockPro()" style="background:#333;">Unlock</button>
+            </div>
+            <button onclick="closeModal('paywallModal')" style="background:none; border:none; color:gray; margin-top:10px; cursor:pointer;">Close</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="adminModal">
+        <div class="modal">
+            <h2>🔐 Admin Login</h2>
+            <input type="email" id="admEmail" placeholder="Email">
+            <input type="password" id="admPass" placeholder="Password">
+            <button class="btn" onclick="adminLogin()">Login</button>
+            <button onclick="closeModal('adminModal')" style="background:none; border:none; color:gray; margin-top:10px; cursor:pointer;">Cancel</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo"><i class="fas fa-cube"></i> Unity<span>Master</span></div>
+        
+        <div class="nav-head">Core</div>
+        <div class="nav-item active" onclick="nav('dashboard')"><i class="fas fa-chart-pie"></i> Dashboard</div>
+        <div class="nav-item" onclick="nav('videocall')"><i class="fas fa-video"></i> Video Meet</div>
+        <div class="nav-item" onclick="nav('tasks')"><i class="fas fa-check"></i> Tasks</div>
+
+        <div class="nav-head">Premium Tools</div>
+        <div class="nav-item" onclick="checkPro('ads')"><i class="fas fa-bullhorn"></i> Ads Manager <i class="fas fa-lock lock"></i></div>
+        <div class="nav-item" onclick="checkPro('website')"><i class="fas fa-globe"></i> Web Builder <i class="fas fa-lock lock"></i></div>
+        <div class="nav-item" onclick="checkPro('seo')"><i class="fas fa-search"></i> SEO Master <i class="fas fa-lock lock"></i></div>
+        <div class="nav-item" onclick="checkPro('resume')"><i class="fas fa-file-user"></i> Resume <i class="fas fa-lock lock"></i></div>
+        
+        <div class="nav-head">Admin</div>
+        <div class="nav-item" onclick="openAdmin()"><i class="fas fa-user-shield"></i> Admin Panel</div>
+        <div id="adminLinks" style="display:none;">
+            <div class="nav-item" onclick="nav('admin-orders')">📦 All Orders</div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <div>
+                <h3 style="margin:0;">Unity Suite</h3>
+                <span id="planBadge" style="font-size:0.8rem; color:var(--muted);">Free Plan</span>
+            </div>
+            <div style="background:rgba(16,185,129,0.1); color:var(--success); padding:5px 15px; border-radius:20px; font-weight:bold;">
+                Wallet: <span id="walletBal">$0.00</span>
+            </div>
+        </div>
+
+        <div id="dashboard" class="section active">
+            <div class="grid">
+                <div class="card">
+                    <div style="color:var(--primary);">Active Projects</div>
+                    <h2 id="dashProjects">0</h2>
+                </div>
+                <div class="card">
+                    <div style="color:var(--warning);">Premium Status</div>
+                    <h2 id="dashStatus">Free</h2>
+                    <button class="btn" onclick="openPaywall()" style="font-size:0.8rem; padding:5px;">Upgrade</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="videocall" class="section">
+            <div class="card">
+                <h3>📹 Global Video Meeting</h3>
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <input type="text" id="myMeetName" placeholder="Your Name">
+                    <button class="btn" style="width:auto;" onclick="startCall()">Join</button>
+                </div>
+                <div style="font-size:0.8rem; color:gray;" id="meetID">ID: Not Connected</div>
+                <div class="video-grid" id="videoGrid"></div>
+            </div>
+        </div>
+
+        <div id="ads" class="section">
+            <h2>📢 Ads Manager</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Create Campaign</h3>
+                    <label>Business</label><input type="text" id="adBiz">
+                    <label>Platform</label><select id="adPlat"><option>Google</option><option>Facebook</option><option>Instagram</option></select>
+                    <label>Budget ($)</label><input type="number" id="adBud">
+                    <button class="btn" onclick="genAdCopy()">✨ AI Write Ad</button>
+                    <textarea id="adCopy" placeholder="Ad Copy..." style="margin-top:10px;"></textarea>
+                    <button class="btn" style="background:var(--success);" onclick="launchAd()">🚀 Pay & Launch</button>
+                </div>
+                <div class="card">
+                    <h3>Your Campaigns</h3>
+                    <div id="campList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="website" class="section">
+            <h2>🌐 AI Website Builder</h2>
+            <div class="card">
+                <label>Business Name</label><input type="text" id="webName">
+                <label>Description</label><textarea id="webDesc"></textarea>
+                <button class="btn" onclick="genSite()">Generate Website</button>
+                <div id="webPreview" style="margin-top:15px; padding:15px; background:white; color:black; display:none;"></div>
+            </div>
+        </div>
+
+        <div id="seo" class="section">
+            <h2>🔍 SEO Ranker #1</h2>
+            <div class="card">
+                <label>Website URL</label><input type="text" id="seoUrl">
+                <button class="btn" onclick="runSeo()">Audit Website</button>
+                <div id="seoRes" style="margin-top:15px; white-space:pre-wrap; color:#cbd5e1;"></div>
+            </div>
+        </div>
+
+        <div id="resume" class="section">
+            <h2>📄 AI Resume</h2>
+            <div class="card">
+                <label>Name</label><input type="text" id="resName">
+                <label>Skills</label><input type="text" id="resSkill">
+                <button class="btn" onclick="makeRes()">Create PDF</button>
+                <div id="resPrev" style="background:white; color:black; padding:20px; margin-top:10px; display:none;"></div>
+            </div>
+        </div>
+
+        <div id="admin-orders" class="section">
+            <h2 style="color:var(--danger);">👑 Admin Panel</h2>
+            <div class="card">
+                <h3>All Ad Orders</h3>
+                <div id="adminList">No orders yet.</div>
+            </div>
+        </div>
+
+        <div id="tasks" class="section">
+            <div class="card">
+                <h3>My Tasks</h3>
+                <input type="text" id="newTask" placeholder="Add task..."><button class="btn" onclick="addTask()">Add</button>
+                <div id="taskList" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIG ---
+        const API_KEY = "AIzaSyBMkYNc9E4FV60wDXXsi0nCNZybp4dgIdQ";
+        const ADMIN_EMAIL = "ajholabibi29@gmail.com";
+        const ADMIN_PASS = "Mdalam7294110767@";
+        const PAYPAL = "md2470514@gmail.com";
+
+        // --- STATE ---
+        let isPro = localStorage.getItem('isPro') === 'true';
+        let wallet = parseFloat(localStorage.getItem('wallet')) || 0;
+        let campaigns = JSON.parse(localStorage.getItem('camps')) || [];
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        // --- INIT ---
+        function init() {
+            updateUI();
+            renderTasks();
+            renderCamps();
+        }
+
+        // --- NAVIGATION ---
+        function nav(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+        function checkPro(id) {
+            if(isPro) nav(id); else openPaywall();
+        }
+        function openPaywall() { document.getElementById('paywallModal').style.display='flex'; }
+        function closeModal(id) { document.getElementById(id).style.display='none'; }
+        function openAdmin() { document.getElementById('adminModal').style.display='flex'; }
+
+        // --- AUTH & PAYMENTS ---
+        function payNow() { window.open(`https://www.paypal.com/cgi-bin/webscr?cmd=_xclick&business=${PAYPAL}&amount=29.00&item_name=UnityPro`, '_blank'); }
+        function unlockPro() {
+            if(document.getElementById('unlockCode').value === "UNITYPRO") {
+                localStorage.setItem('isPro', 'true'); isPro = true;
+                alert("Unlocked!"); closeModal('paywallModal'); updateUI();
+            } else alert("Invalid");
+        }
+        function adminLogin() {
+            if(document.getElementById('admEmail').value === ADMIN_EMAIL && document.getElementById('admPass').value === ADMIN_PASS) {
+                document.getElementById('adminLinks').style.display='block';
+                closeModal('adminModal'); nav('admin-orders'); renderAdmin();
+            } else alert("Wrong details");
+        }
+        function updateUI() {
+            document.getElementById('walletBal').innerText = `$${wallet}`;
+            document.getElementById('planBadge').innerText = isPro ? "Premium 👑" : "Free Plan";
+            document.getElementById('dashStatus').innerText = isPro ? "Premium" : "Free";
+            const locks = document.querySelectorAll('.lock');
+            locks.forEach(l => l.style.display = isPro ? 'none' : 'inline');
+        }
+
+        // --- 1. ADS LOGIC ---
+        async function genAdCopy() {
+            const b = document.getElementById('adBiz').value;
+            const res = await callAI(`Write catchy ad copy for ${b}`);
+            document.getElementById('adCopy').value = res;
+        }
+        function launchAd() {
+            const bud = parseFloat(document.getElementById('adBud').value);
+            if(wallet < bud) return alert("Low Balance! Add funds via Admin contact.");
+            wallet -= bud; localStorage.setItem('wallet', wallet); updateUI();
+            campaigns.push({biz:document.getElementById('adBiz').value, bud, status:'Pending'});
+            localStorage.setItem('camps', JSON.stringify(campaigns));
+            renderCamps(); alert("Ad Submitted!");
+        }
+        function renderCamps() {
+            document.getElementById('campList').innerHTML = campaigns.map(c=>`<div><b>${c.biz}</b> ($${c.bud}) - ${c.status}</div>`).join('');
+            document.getElementById('dashProjects').innerText = campaigns.length;
+        }
+
+        // --- 2. WEBSITE LOGIC ---
+        async function genSite() {
+            const n = document.getElementById('webName').value;
+            const res = await callAI(`Create simple HTML homepage code for business: ${n}. No markdown.`);
+            const p = document.getElementById('webPreview'); p.style.display='block'; p.innerHTML = res;
+        }
+
+        // --- 3. SEO LOGIC ---
+        async function runSeo() {
+            const u = document.getElementById('seoUrl').value;
+            const res = await callAI(`SEO Audit for ${u}. List 3 errors and 3 fixes.`);
+            document.getElementById('seoRes').innerText = res;
+        }
+
+        // --- 4. VIDEO CALL (Simplified) ---
+        let peer;
+        function startCall() {
+            peer = new Peer();
+            peer.on('open', id => {
+                document.getElementById('meetID').innerText = `ID: ${id}`;
+                navigator.mediaDevices.getUserMedia({video:true, audio:true}).then(stream => {
+                    addVid(stream);
+                });
+            });
+            peer.on('call', call => {
+                navigator.mediaDevices.getUserMedia({video:true, audio:true}).then(stream => {
+                    call.answer(stream);
+                    call.on('stream', rStream => addVid(rStream));
+                });
+            });
+        }
+        function addVid(stream) {
+            const v = document.createElement('video'); v.srcObject = stream; v.autoplay=true;
+            const d = document.createElement('div'); d.className='video-box'; d.appendChild(v);
+            document.getElementById('videoGrid').appendChild(d);
+        }
+
+        // --- 5. RESUME ---
+        function makeRes() {
+            const h = `<h1>${document.getElementById('resName').value}</h1><hr><p>${document.getElementById('resSkill').value}</p>`;
+            document.getElementById('resPrev').innerHTML = h; document.getElementById('resPrev').style.display='block';
+        }
+
+        // --- ADMIN RENDER ---
+        function renderAdmin() {
+            document.getElementById('adminList').innerHTML = campaigns.map(c=>`<div style='border-bottom:1px solid #333; padding:5px;'>${c.biz} - $${c.bud} <button onclick='alert("Approved")' style='padding:2px;'>Approve</button></div>`).join('');
+        }
+
+        // --- UTILS ---
+        async function callAI(p) {
+            try {
+                const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+                    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:[{parts:[{text:p}]}]})
+                });
+                const d = await r.json(); return d.candidates[0].content.parts[0].text;
+            } catch(e) { return "Error"; }
+        }
+        function addTask(){tasks.push(document.getElementById('newTask').value); localStorage.setItem('tasks',JSON.stringify(tasks)); renderTasks();}
+        function renderTasks(){document.getElementById('taskList').innerHTML = tasks.map(t=>`<div>• ${t}</div>`).join('');}
+
+        init();
+    </script>
+</body>
+</html>
